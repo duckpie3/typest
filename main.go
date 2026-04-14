@@ -9,15 +9,14 @@ import (
 )
 
 type model struct {
-	text             string
-	words            []string
-	wordsView        []string
-	wordPosition     int
-	currentInputView string
-	cursorPosition   int
-	charsStack       []string
-	textView         string
-	inputModel       textinput.Model
+	testWords      []string
+	testWordsView  []string
+	testPosition   int
+	inputView      string
+	cursorPosition int
+	charsStack     []string
+	testView       string
+	inputModel     textinput.Model
 }
 
 func NewModel() model {
@@ -33,15 +32,14 @@ func NewModel() model {
 	}
 
 	return model{
-		text:             text,
-		words:            words,
-		wordsView:        wordsView,
-		wordPosition:     0,
-		currentInputView: "",
-		cursorPosition:   0,
-		charsStack:       []string{},
-		textView:         "",
-		inputModel:       ti,
+		testWords:      words,
+		testWordsView:  wordsView,
+		testPosition:   0,
+		inputView:      "",
+		cursorPosition: 0,
+		charsStack:     []string{},
+		testView:       "",
+		inputModel:     ti,
 	}
 }
 
@@ -58,15 +56,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "left", "right":
 			return m, nil
 		case "space":
-			if m.words[m.wordPosition] == m.inputModel.Value()+" " {
-				if m.wordPosition+1 >= len(m.words) {
+			if m.testWords[m.testPosition] == m.inputModel.Value()+" " {
+				if m.testPosition+1 >= len(m.testWords) {
 					return m, tea.Quit
 				}
-				m.wordsView[m.wordPosition] = typedStyle.Render(m.words[m.wordPosition])
-				m.wordPosition += 1
-				cursor := cursorStyle.Render(string(m.words[m.wordPosition][0]))
-				m.wordsView[m.wordPosition] = cursor + untypedStyle.Render(m.words[m.wordPosition][1:])
-				m.currentInputView = ""
+				m.testWordsView[m.testPosition] = typedStyle.Render(m.testWords[m.testPosition])
+				m.testPosition += 1
+				cursor := cursorStyle.Render(string(m.testWords[m.testPosition][0]))
+				m.testWordsView[m.testPosition] = cursor + untypedStyle.Render(m.testWords[m.testPosition][1:])
+				m.inputView = ""
 				m.inputModel.SetValue("")
 				m.cursorPosition = 0
 				m.charsStack = []string{}
@@ -77,7 +75,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	var cmd tea.Cmd
 	m.inputModel, cmd = m.inputModel.Update(msg)
-	currentWord := m.words[m.wordPosition]
+	currentWord := m.testWords[m.testPosition]
 	var lastTypedChar byte
 
 	if m.cursorPosition < m.inputModel.Position() { // User enters a character
@@ -85,7 +83,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	} else if m.cursorPosition > m.inputModel.Position() { // User deletes a character
 		top := m.charsStack[len(m.charsStack)-1]
 		m.charsStack = m.charsStack[:len(m.charsStack)-1]
-		m.currentInputView = m.currentInputView[:len(m.currentInputView)-len(top)]
+		m.inputView = m.inputView[:len(m.inputView)-len(top)]
 	}
 
 	var cursor string
@@ -94,9 +92,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.cursorPosition < m.inputModel.Position() { // User entered a character
 			lastTypedCharStyled := errorStyle.Render(string(lastTypedChar))
 			m.charsStack = append(m.charsStack, lastTypedCharStyled)
-			m.currentInputView += lastTypedCharStyled
+			m.inputView += lastTypedCharStyled
 		}
-		m.wordsView[m.wordPosition] = m.currentInputView + cursor
+		m.testWordsView[m.testPosition] = m.inputView + cursor
 	} else {
 		if m.cursorPosition < m.inputModel.Position() {
 			var lastTypedCharStyled string
@@ -106,10 +104,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				lastTypedCharStyled = errorStyle.Render(string(lastTypedChar))
 			}
 			m.charsStack = append(m.charsStack, lastTypedCharStyled)
-			m.currentInputView += lastTypedCharStyled
+			m.inputView += lastTypedCharStyled
 		}
 		cursor = cursorStyle.Render(string(currentWord[m.inputModel.Position()]))
-		m.wordsView[m.wordPosition] = m.currentInputView + cursor + untypedStyle.Render(currentWord[m.inputModel.Position()+1:])
+		m.testWordsView[m.testPosition] = m.inputView + cursor + untypedStyle.Render(currentWord[m.inputModel.Position()+1:])
 	}
 
 	m.cursorPosition = m.inputModel.Position()
@@ -118,12 +116,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() tea.View {
 
-	m.textView = ""
-	for _, w := range m.wordsView {
-		m.textView += w
+	m.testView = ""
+	for _, w := range m.testWordsView {
+		m.testView += w
 	}
 	var s string
-	s = m.textView
+	s = m.testView
+	s = testStyle.Render(s)
 	s += "\n"
 	s += m.inputModel.View()
 	s += "\n"
