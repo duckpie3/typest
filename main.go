@@ -6,6 +6,7 @@ import (
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 type model struct {
@@ -17,6 +18,20 @@ type model struct {
 	charsStack     []string
 	testView       string
 	inputModel     textinput.Model
+	started        bool
+	width          int
+	height         int
+}
+
+func (m *model) NextWord() {
+	m.testWordsView[m.testPosition] = typedStyle.Render(m.testWords[m.testPosition])
+	m.testPosition += 1
+	cursor := cursorStyle.Render(string(m.testWords[m.testPosition][0]))
+	m.testWordsView[m.testPosition] = cursor + untypedStyle.Render(m.testWords[m.testPosition][1:])
+	m.inputView = ""
+	m.inputModel.SetValue("")
+	m.cursorPosition = 0
+	m.charsStack = []string{}
 }
 
 func NewModel() model {
@@ -40,6 +55,7 @@ func NewModel() model {
 		charsStack:     []string{},
 		testView:       "",
 		inputModel:     ti,
+		started:        false,
 	}
 }
 
@@ -49,6 +65,10 @@ func (m model) Init() tea.Cmd {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		return m, nil
 	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c":
@@ -60,14 +80,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.testPosition+1 >= len(m.testWords) {
 					return m, tea.Quit
 				}
-				m.testWordsView[m.testPosition] = typedStyle.Render(m.testWords[m.testPosition])
-				m.testPosition += 1
-				cursor := cursorStyle.Render(string(m.testWords[m.testPosition][0]))
-				m.testWordsView[m.testPosition] = cursor + untypedStyle.Render(m.testWords[m.testPosition][1:])
-				m.inputView = ""
-				m.inputModel.SetValue("")
-				m.cursorPosition = 0
-				m.charsStack = []string{}
+				m.NextWord()
 				return m, nil
 			}
 
@@ -87,7 +100,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	var cursor string
-	if m.inputModel.Position() >= len(currentWord) {
+	if m.inputModel.Position() >= len(currentWord) { // Out of bounds
 		cursor = cursorStyle.Render(" ")
 		if m.cursorPosition < m.inputModel.Position() { // User entered a character
 			lastTypedCharStyled := errorStyle.Render(string(lastTypedChar))
@@ -95,7 +108,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.inputView += lastTypedCharStyled
 		}
 		m.testWordsView[m.testPosition] = m.inputView + cursor
-	} else {
+	} else { // Not out of bounds
 		if m.cursorPosition < m.inputModel.Position() {
 			var lastTypedCharStyled string
 			if lastTypedChar == currentWord[m.cursorPosition] {
@@ -110,6 +123,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.testWordsView[m.testPosition] = m.inputView + cursor + untypedStyle.Render(currentWord[m.inputModel.Position()+1:])
 	}
 
+	// When on the last word, check if it's correct so there is no need to enter space
+	if m.testPosition == len(m.testWords)-1 && len(m.inputModel.Value()) == len(currentWord)-1 {
+		if m.testWords[m.testPosition] == m.inputModel.Value()+" " {
+			return m, tea.Quit
+		}
+	}
+
 	m.cursorPosition = m.inputModel.Position()
 	return m, cmd
 }
@@ -120,13 +140,11 @@ func (m model) View() tea.View {
 	for _, w := range m.testWordsView {
 		m.testView += w
 	}
-	var s string
-	s = m.testView
-	s = testStyle.Render(s)
-	s += "\n"
-	s += m.inputModel.View()
-	s += "\n"
-	return tea.View{Content: s}
+
+	content := testStyle.Render(m.testView) + "\n" + m.inputModel.View() + "\n"
+	s := lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content)
+
+	return tea.View{Content: s, AltScreen: true}
 }
 
 func main() {
