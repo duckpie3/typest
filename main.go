@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
@@ -19,6 +21,9 @@ type model struct {
 	testView       string
 	inputModel     textinput.Model
 	started        bool
+	startTime      time.Time
+	typedChars     int
+	wpm            int
 	width          int
 	height         int
 }
@@ -56,6 +61,7 @@ func NewModel() model {
 		testView:       "",
 		inputModel:     ti,
 		started:        false,
+		typedChars:     0,
 	}
 }
 
@@ -69,11 +75,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		return m, nil
+	case tea.PasteMsg:
+		return m, nil
 	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c":
 			return m, tea.Quit
-		case "left", "right":
+		case "left", "right", "ctrl+v":
 			return m, nil
 		case "space":
 			if m.testWords[m.testPosition] == m.inputModel.Value()+" " {
@@ -82,8 +90,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				m.NextWord()
 				return m, nil
+			} else {
+				return m, nil
 			}
-
 		}
 	}
 	var cmd tea.Cmd
@@ -92,8 +101,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var lastTypedChar byte
 
 	if m.cursorPosition < m.inputModel.Position() { // User enters a character
+		m.typedChars++
+		if !m.started {
+			m.started = true
+			m.startTime = time.Now()
+		}
 		lastTypedChar = m.inputModel.Value()[m.cursorPosition]
 	} else if m.cursorPosition > m.inputModel.Position() { // User deletes a character
+		m.typedChars--
+		if len(m.charsStack) < 1 {
+			log.Fatal("Tried to delete a character that didn't exist.")
+		}
 		top := m.charsStack[len(m.charsStack)-1]
 		m.charsStack = m.charsStack[:len(m.charsStack)-1]
 		m.inputView = m.inputView[:len(m.inputView)-len(top)]
@@ -114,7 +132,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if lastTypedChar == currentWord[m.cursorPosition] {
 				lastTypedCharStyled = typedStyle.Render(string(lastTypedChar))
 			} else {
-				lastTypedCharStyled = errorStyle.Render(string(lastTypedChar))
+				lastTypedCharStyled = errorStyle.Render(string(currentWord[m.cursorPosition]))
 			}
 			m.charsStack = append(m.charsStack, lastTypedCharStyled)
 			m.inputView += lastTypedCharStyled
@@ -123,13 +141,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.testWordsView[m.testPosition] = m.inputView + cursor + untypedStyle.Render(currentWord[m.inputModel.Position()+1:])
 	}
 
-	// When on the last word, check if it's correct so there is no need to enter space
+	// When on the last word, check if it's correct so there is no need Pleaseto enter space
 	if m.testPosition == len(m.testWords)-1 && len(m.inputModel.Value()) == len(currentWord)-1 {
 		if m.testWords[m.testPosition] == m.inputModel.Value()+" " {
 			return m, tea.Quit
 		}
 	}
 
+	if m.started == true {
+		elapsed := time.Since(m.startTime).Minutes()
+		if m.typedChars > 1 {
+			m.wpm = int(float64(m.typedChars) / 5 / elapsed)
+		}
+	}
 	m.cursorPosition = m.inputModel.Position()
 	return m, cmd
 }
@@ -141,7 +165,7 @@ func (m model) View() tea.View {
 		m.testView += w
 	}
 
-	content := testStyle.Render(m.testView) + "\n" + m.inputModel.View() + "\n"
+	content := testStyle.Render(m.testView) + "\n" + m.inputModel.View() + "\n" + fmt.Sprintf("WPM: %d", m.wpm)
 	s := lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content)
 
 	return tea.View{Content: s, AltScreen: true}

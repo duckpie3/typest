@@ -12,7 +12,7 @@ var typedStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("7"))
 
 var cursorStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("8")).
+	Foreground(lipgloss.Color("0")).
 	Background(lipgloss.Color("7"))
 
 var testStyle = lipgloss.NewStyle().
