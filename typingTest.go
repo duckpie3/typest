@@ -11,7 +11,7 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-type model struct {
+type typingTestModel struct {
 	testWords      []string
 	testWordsView  []string
 	testPosition   int
@@ -21,14 +21,13 @@ type model struct {
 	testView       string
 	inputModel     textinput.Model
 	started        bool
+	finished       bool
 	startTime      time.Time
 	typedChars     int
 	wpm            int
-	width          int
-	height         int
 }
 
-func (m *model) NextWord() {
+func (m *typingTestModel) nextWord() {
 	m.testWordsView[m.testPosition] = typedStyle.Render(m.testWords[m.testPosition])
 	m.testPosition += 1
 	cursor := cursorStyle.Render(string(m.testWords[m.testPosition][0]))
@@ -39,7 +38,7 @@ func (m *model) NextWord() {
 	m.charsStack = []string{}
 }
 
-func NewModel() model {
+func NewTypingTestModel() typingTestModel {
 	ti := textinput.New()
 	ti.Focus()
 
@@ -51,7 +50,7 @@ func NewModel() model {
 		wordsView[i] = untypedStyle.Render(words[i])
 	}
 
-	return model{
+	return typingTestModel{
 		testWords:      words,
 		testWordsView:  wordsView,
 		testPosition:   0,
@@ -61,20 +60,17 @@ func NewModel() model {
 		testView:       "",
 		inputModel:     ti,
 		started:        false,
+		finished:       false,
 		typedChars:     0,
 	}
 }
 
-func (m model) Init() tea.Cmd {
+func (m typingTestModel) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m typingTestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		return m, nil
 	case tea.PasteMsg:
 		return m, nil
 	case tea.KeyPressMsg:
@@ -84,11 +80,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "left", "right", "ctrl+v":
 			return m, nil
 		case "space":
-			if m.testWords[m.testPosition] == m.inputModel.Value()+" " {
+			if m.testPosition < len(m.testWords)-1 && m.testWords[m.testPosition] == m.inputModel.Value()+" " {
 				if m.testPosition+1 >= len(m.testWords) {
 					return m, tea.Quit
 				}
-				m.NextWord()
+				m.nextWord()
 				return m, nil
 			} else {
 				return m, nil
@@ -144,7 +140,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// When on the last word, check if it's correct so there is no need Pleaseto enter space
 	if m.testPosition == len(m.testWords)-1 && len(m.inputModel.Value()) == len(currentWord)-1 {
 		if m.testWords[m.testPosition] == m.inputModel.Value()+" " {
-			return m, tea.Quit
+			m.finished = true
+			return m, nil
 		}
 	}
 
@@ -158,7 +155,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) View() tea.View {
+func (m typingTestModel) View() tea.View {
 
 	m.testView = ""
 	for _, w := range m.testWordsView {
@@ -166,15 +163,7 @@ func (m model) View() tea.View {
 	}
 
 	content := testStyle.Render(m.testView) + "\n" + m.inputModel.View() + "\n" + fmt.Sprintf("WPM: %d", m.wpm)
-	s := lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content)
+	s := lipgloss.Place(termWidth, termHeight, lipgloss.Center, lipgloss.Center, content)
 
 	return tea.View{Content: s, AltScreen: true}
-}
-
-func main() {
-	m := NewModel()
-	p := tea.NewProgram(m)
-	if _, err := p.Run(); err != nil {
-		log.Fatal(err)
-	}
 }
