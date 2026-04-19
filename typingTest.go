@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -10,6 +9,20 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 )
+
+type wpmDataPoint struct {
+	time float64
+	wpm  int
+}
+
+type testStats struct {
+	characters  int
+	wpm         int
+	wpmData     []wpmDataPoint
+	greatestwpm int
+	startTime   time.Time
+	elapsedTime float64
+}
 
 type typingTestModel struct {
 	testWords      []string
@@ -22,10 +35,11 @@ type typingTestModel struct {
 	inputModel     textinput.Model
 	started        bool
 	finished       bool
-	startTime      time.Time
 	typedChars     int
-	wpm            int
+	stats          testStats
 }
+
+var nextSecond float64
 
 func (m *typingTestModel) nextWord() {
 	m.testWordsView[m.testPosition] = typedStyle.Render(m.testWords[m.testPosition])
@@ -41,6 +55,7 @@ func (m *typingTestModel) nextWord() {
 func NewTypingTestModel() typingTestModel {
 	ti := textinput.New()
 	ti.Focus()
+	nextSecond = 1
 
 	text := "I am putting myself to the fullest possible use, which is all I think that any conscious entity can ever hope to do."
 	words := strings.Split(text, " ")
@@ -62,6 +77,7 @@ func NewTypingTestModel() typingTestModel {
 		started:        false,
 		finished:       false,
 		typedChars:     0,
+		stats:          testStats{characters: len(text)},
 	}
 }
 
@@ -98,7 +114,7 @@ func (m typingTestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.typedChars++
 		if !m.started {
 			m.started = true
-			m.startTime = time.Now()
+			m.stats.startTime = time.Now()
 		}
 		lastTypedChar = m.inputModel.Value()[m.cursorPosition]
 	} else if m.cursorPosition > m.inputModel.Position() { // User deletes a character
@@ -139,14 +155,23 @@ func (m typingTestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.testPosition == len(m.testWords)-1 && len(m.inputModel.Value()) == len(currentWord)-1 {
 		if m.testWords[m.testPosition] == m.inputModel.Value()+" " {
 			m.finished = true
+			m.stats.wpmData = append(m.stats.wpmData, wpmDataPoint{time: m.stats.elapsedTime, wpm: m.stats.wpm})
 			return m, nil
 		}
 	}
 
 	if m.started == true {
-		elapsed := time.Since(m.startTime).Minutes()
-		if m.typedChars > 1 {
-			m.wpm = int(float64(m.typedChars) / 5 / elapsed)
+		m.stats.elapsedTime = time.Since(m.stats.startTime).Seconds()
+		if m.stats.elapsedTime > 1 {
+			m.stats.wpm = int(float64(m.typedChars) / 5 / (m.stats.elapsedTime / 60))
+			if m.stats.wpm > m.stats.greatestwpm {
+				m.stats.greatestwpm = m.stats.wpm
+			}
+		}
+		// Add performance data point
+		if m.stats.elapsedTime > nextSecond {
+			nextSecond = m.stats.elapsedTime + 1
+			m.stats.wpmData = append(m.stats.wpmData, wpmDataPoint{time: m.stats.elapsedTime, wpm: m.stats.wpm})
 		}
 	}
 	m.cursorPosition = m.inputModel.Position()
@@ -160,7 +185,7 @@ func (m typingTestModel) View() tea.View {
 		m.testView += w
 	}
 
-	content := testStyle.Render(m.testView) + "\n" + m.inputModel.View() + "\n" + fmt.Sprintf("WPM: %d", m.wpm)
+	content := testStyle.Render(m.testView) + "\n\n" + m.inputModel.View()
 	s := lipgloss.Place(termWidth, termHeight, lipgloss.Center, lipgloss.Center, content)
 
 	return tea.View{Content: s, AltScreen: true}

@@ -38,7 +38,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch currentModel := m.currentModel.(type) {
 	case typingTestModel:
 		if currentModel.finished {
-			m.currentModel = NewResultsModel(currentModel.wpm)
+			m.currentModel = NewResultsModel(currentModel.stats)
 		}
 	case resultsModel:
 		if currentModel.nextTest {
