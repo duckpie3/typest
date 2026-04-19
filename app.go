@@ -10,15 +10,15 @@ var termWidth int
 var termHeight int
 
 type appModel struct {
-	screen tea.Model
+	currentModel tea.Model
 }
 
 func NewAppModel() appModel {
-	return appModel{screen: NewTypingTestModel()}
+	return appModel{currentModel: NewTypingTestModel()}
 }
 
 func (m appModel) Init() tea.Cmd {
-	return m.screen.Init()
+	return m.currentModel.Init()
 }
 
 func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -26,25 +26,31 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		termWidth = _msg.Width
 		termHeight = _msg.Height
+	case tea.KeyPressMsg:
+		switch _msg.String() {
+		case "ctrl+c":
+			return m, tea.Quit
+		}
 	}
 
 	var cmd tea.Cmd
-	m.screen, cmd = m.screen.Update(msg)
-	switch screen := m.screen.(type) {
+	m.currentModel, cmd = m.currentModel.Update(msg)
+	switch currentModel := m.currentModel.(type) {
 	case typingTestModel:
-		if screen.finished {
-			m.screen = NewResultsModel(screen.wpm)
+		if currentModel.finished {
+			m.currentModel = NewResultsModel(currentModel.wpm)
 		}
 	case resultsModel:
-		if screen.nextTest {
-			m.screen = NewTypingTestModel()
+		if currentModel.nextTest {
+			m.currentModel = NewTypingTestModel()
 		}
 	}
+
 	return m, cmd
 }
 
 func (m appModel) View() tea.View {
-	return m.screen.View()
+	return m.currentModel.View()
 }
 
 func main() {

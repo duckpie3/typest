@@ -75,8 +75,6 @@ func (m typingTestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case tea.KeyPressMsg:
 		switch msg.String() {
-		case "ctrl+c":
-			return m, tea.Quit
 		case "left", "right", "ctrl+v":
 			return m, nil
 		case "space":
