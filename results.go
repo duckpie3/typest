@@ -16,12 +16,13 @@ type resultsModel struct {
 }
 
 func (m *resultsModel) buildGraph() {
+	m.graph.Style = graphStyle
+	m.graph.DrawXYAxisAndLabel()
 	for i := range len(m.stats.wpmData) - 1 {
 		point1 := canvas.Float64Point{X: m.stats.wpmData[i].time, Y: float64(m.stats.wpmData[i].wpm)}
 		point2 := canvas.Float64Point{X: m.stats.wpmData[i+1].time, Y: float64(m.stats.wpmData[i+1].wpm)}
 		m.graph.DrawBrailleLine(point1, point2)
 	}
-	m.graph.DrawXYAxisAndLabel()
 }
 
 func NewResultsModel(stats testStats) resultsModel {

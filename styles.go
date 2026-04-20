@@ -18,3 +18,10 @@ var cursorStyle = lipgloss.NewStyle().
 var testStyle = lipgloss.NewStyle().
 	Width(80).
 	Align(lipgloss.Left)
+
+var inputStyle = lipgloss.NewStyle().
+	BorderStyle(lipgloss.RoundedBorder()).
+	PaddingLeft(1)
+
+var graphStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("1"))

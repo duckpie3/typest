@@ -25,6 +25,7 @@ go run .
 
 - Type to match the displayed text
 - Space moves to the next word when the current word is correct
+- Ctrl+Backspace clears the current word
 - On the results screen, press Space to start another test
 - Ctrl+C quits
 

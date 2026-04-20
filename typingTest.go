@@ -41,6 +41,32 @@ type typingTestModel struct {
 
 var nextSecond float64
 
+func (m *typingTestModel) clearCurrentWord() {
+	if m.testPosition >= len(m.testWords) {
+		return
+	}
+
+	deletedChars := len(m.inputModel.Value())
+	if deletedChars > m.typedChars {
+		m.typedChars = 0
+	} else {
+		m.typedChars -= deletedChars
+	}
+
+	m.inputModel.SetValue("")
+	m.inputView = ""
+	m.cursorPosition = 0
+	m.charsStack = []string{}
+
+	currentWord := m.testWords[m.testPosition]
+	if len(currentWord) == 0 {
+		m.testWordsView[m.testPosition] = cursorStyle.Render(" ")
+		return
+	}
+
+	m.testWordsView[m.testPosition] = cursorStyle.Render(string(currentWord[0])) + untypedStyle.Render(currentWord[1:])
+}
+
 func (m *typingTestModel) nextWord() {
 	m.testWordsView[m.testPosition] = typedStyle.Render(m.testWords[m.testPosition])
 	m.testPosition += 1
@@ -55,6 +81,9 @@ func (m *typingTestModel) nextWord() {
 func NewTypingTestModel() typingTestModel {
 	ti := textinput.New()
 	ti.Focus()
+	ti.SetWidth(32)
+	ti.Prompt = ""
+	ti.Placeholder = "Type the above word here"
 	nextSecond = 1
 	data, err := loadQuotes("quotes.json")
 	if err != nil {
@@ -96,6 +125,9 @@ func (m typingTestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "left", "right", "ctrl+v":
 			return m, nil
+		case "ctrl+backspace", "alt+backspace", "ctrl+w":
+			m.clearCurrentWord()
+			return m, nil
 		case "space":
 			if m.testPosition < len(m.testWords)-1 && m.testWords[m.testPosition] == m.inputModel.Value()+" " {
 				if m.testPosition+1 >= len(m.testWords) {
@@ -118,6 +150,7 @@ func (m typingTestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !m.started {
 			m.started = true
 			m.stats.startTime = time.Now()
+			m.inputModel.Placeholder = ""
 		}
 		lastTypedChar = m.inputModel.Value()[m.cursorPosition]
 	} else if m.cursorPosition > m.inputModel.Position() { // User deletes a character
@@ -188,7 +221,7 @@ func (m typingTestModel) View() tea.View {
 		m.testView += w
 	}
 
-	content := testStyle.Render(m.testView) + "\n\n" + m.inputModel.View()
+	content := testStyle.Render(m.testView) + "\n\n" + inputStyle.Render(m.inputModel.View())
 	s := lipgloss.Place(termWidth, termHeight, lipgloss.Center, lipgloss.Center, content)
 
 	return tea.View{Content: s, AltScreen: true}
