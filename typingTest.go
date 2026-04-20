@@ -56,9 +56,12 @@ func NewTypingTestModel() typingTestModel {
 	ti := textinput.New()
 	ti.Focus()
 	nextSecond = 1
-
-	text := "I am putting myself to the fullest possible use, which is all I think that any conscious entity can ever hope to do."
-	words := strings.Split(text, " ")
+	data, err := loadQuotes("quotes.json")
+	if err != nil {
+		panic(err)
+	}
+	quote := data.RandomQuote()
+	words := strings.Split(quote.Text, " ")
 	wordsView := make([]string, len(words))
 	for i := range words {
 		words[i] += " "
@@ -77,7 +80,7 @@ func NewTypingTestModel() typingTestModel {
 		started:        false,
 		finished:       false,
 		typedChars:     0,
-		stats:          testStats{characters: len(text)},
+		stats:          testStats{characters: quote.Length},
 	}
 }
 
@@ -151,15 +154,6 @@ func (m typingTestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.testWordsView[m.testPosition] = m.inputView + cursor + untypedStyle.Render(currentWord[m.inputModel.Position()+1:])
 	}
 
-	// When on the last word, check if it's correct so there is no need Pleaseto enter space
-	if m.testPosition == len(m.testWords)-1 && len(m.inputModel.Value()) == len(currentWord)-1 {
-		if m.testWords[m.testPosition] == m.inputModel.Value()+" " {
-			m.finished = true
-			m.stats.wpmData = append(m.stats.wpmData, wpmDataPoint{time: m.stats.elapsedTime, wpm: m.stats.wpm})
-			return m, nil
-		}
-	}
-
 	if m.started == true {
 		m.stats.elapsedTime = time.Since(m.stats.startTime).Seconds()
 		if m.stats.elapsedTime > 1 {
@@ -172,6 +166,15 @@ func (m typingTestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.stats.elapsedTime > nextSecond {
 			nextSecond = m.stats.elapsedTime + 1
 			m.stats.wpmData = append(m.stats.wpmData, wpmDataPoint{time: m.stats.elapsedTime, wpm: m.stats.wpm})
+		}
+	}
+
+	// When on the last word, check if it's correct so there is no need Pleaseto enter space
+	if m.testPosition == len(m.testWords)-1 && len(m.inputModel.Value()) == len(currentWord)-1 {
+		if m.testWords[m.testPosition] == m.inputModel.Value()+" " {
+			m.stats.wpmData = append(m.stats.wpmData, wpmDataPoint{time: m.stats.elapsedTime, wpm: m.stats.wpm})
+			m.finished = true
+			return m, nil
 		}
 	}
 	m.cursorPosition = m.inputModel.Position()

@@ -16,5 +16,5 @@ var cursorStyle = lipgloss.NewStyle().
 	Background(lipgloss.Color("7"))
 
 var testStyle = lipgloss.NewStyle().
-	Width(64).
+	Width(80).
 	Align(lipgloss.Left)

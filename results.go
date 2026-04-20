@@ -25,7 +25,7 @@ func (m *resultsModel) buildGraph() {
 }
 
 func NewResultsModel(stats testStats) resultsModel {
-	width := 130
+	width := 120
 	height := 10
 	graph := lc.New(width, height, 1.0, stats.elapsedTime, 0.0, float64(stats.greatestwpm))
 	return resultsModel{stats: stats, graph: graph, nextTest: false}
