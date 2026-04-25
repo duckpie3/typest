@@ -18,7 +18,7 @@ A simple terminal typing test built with Bubble Tea.
 ## Run
 
 ```bash
-go run .
+go run ./cmd/typest
 ```
 
 ## Controls
