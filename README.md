@@ -48,7 +48,7 @@ typest/
 │   ├── quotes/
 │   │   └── loader.go          ← quote data loading and lookup helpers
 │   ├── results/
-│   │   └── results.go         ← results.go: results view and WPM graph rendering
+│   │   └── results.go         ← results view and WPM graph rendering
 │   ├── typing/
 │   │   ├── stats.go
 │   │   └── typing.go          ← typing test state, input handling, live stats collection
