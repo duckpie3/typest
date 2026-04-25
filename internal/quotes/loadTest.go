@@ -1,4 +1,4 @@
-package main
+package quotes
 
 import (
 	"encoding/json"
@@ -20,7 +20,7 @@ type Data struct {
 	Quotes   []Quote `json:"quotes"`
 }
 
-func loadQuotes(path string) (*Data, error) {
+func LoadQuotes(path string) (*Data, error) {
 	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -43,6 +43,7 @@ func (d *Data) QuoteAt(i int) (Quote, bool) {
 
 func (d *Data) RandomQuote() Quote {
 	index := rand.Intn(len(d.Quotes))
+	// quote, ok := d.QuoteAt(59)
 	quote, ok := d.QuoteAt(index)
 	if ok {
 		return quote

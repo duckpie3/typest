@@ -1,4 +1,4 @@
-package main
+package typing
 
 import (
 	"log"
@@ -8,23 +8,25 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/duckpie3/typest/internal/quotes"
+	"github.com/duckpie3/typest/internal/ui"
 )
 
 type wpmDataPoint struct {
-	time float64
-	wpm  int
+	Time float64
+	Wpm  int
 }
 
-type testStats struct {
-	characters  int
-	wpm         int
-	wpmData     []wpmDataPoint
-	greatestwpm int
+type TestStats struct {
+	Characters  int
+	Wpm         int
+	WpmData     []wpmDataPoint
+	Greatestwpm int
 	startTime   time.Time
-	elapsedTime float64
+	ElapsedTime float64
 }
 
-type typingTestModel struct {
+type Model struct {
 	testWords      []string
 	testWordsView  []string
 	testPosition   int
@@ -34,14 +36,16 @@ type typingTestModel struct {
 	testView       string
 	inputModel     textinput.Model
 	started        bool
-	finished       bool
+	Done           bool
 	typedChars     int
-	stats          testStats
+	Stats          TestStats
+	width          int
+	height         int
 }
 
 var nextSecond float64
 
-func (m *typingTestModel) clearCurrentWord() {
+func (m *Model) clearCurrentWord() {
 	if m.testPosition >= len(m.testWords) {
 		return
 	}
@@ -60,32 +64,32 @@ func (m *typingTestModel) clearCurrentWord() {
 
 	currentWord := m.testWords[m.testPosition]
 	if len(currentWord) == 0 {
-		m.testWordsView[m.testPosition] = cursorStyle.Render(" ")
+		m.testWordsView[m.testPosition] = ui.CursorStyle.Render(" ")
 		return
 	}
 
-	m.testWordsView[m.testPosition] = cursorStyle.Render(string(currentWord[0])) + untypedStyle.Render(currentWord[1:])
+	m.testWordsView[m.testPosition] = ui.CursorStyle.Render(string(currentWord[0])) + ui.TypedStyle.Render(currentWord[1:])
 }
 
-func (m *typingTestModel) nextWord() {
-	m.testWordsView[m.testPosition] = typedStyle.Render(m.testWords[m.testPosition])
+func (m *Model) nextWord() {
+	m.testWordsView[m.testPosition] = ui.TypedStyle.Render(m.testWords[m.testPosition])
 	m.testPosition += 1
-	cursor := cursorStyle.Render(string(m.testWords[m.testPosition][0]))
-	m.testWordsView[m.testPosition] = cursor + untypedStyle.Render(m.testWords[m.testPosition][1:])
+	cursor := ui.CursorStyle.Render(string(m.testWords[m.testPosition][0]))
+	m.testWordsView[m.testPosition] = cursor + ui.UntypedStyle.Render(m.testWords[m.testPosition][1:])
 	m.inputView = ""
 	m.inputModel.SetValue("")
 	m.cursorPosition = 0
 	m.charsStack = []string{}
 }
 
-func NewTypingTestModel() typingTestModel {
+func New() Model {
 	ti := textinput.New()
 	ti.Focus()
 	ti.SetWidth(32)
 	ti.Prompt = ""
 	ti.Placeholder = "Type the above word here"
 	nextSecond = 1
-	data, err := loadQuotes("quotes.json")
+	data, err := quotes.LoadQuotes("assets/quotes.json")
 	if err != nil {
 		panic(err)
 	}
@@ -94,10 +98,10 @@ func NewTypingTestModel() typingTestModel {
 	wordsView := make([]string, len(words))
 	for i := range words {
 		words[i] += " "
-		wordsView[i] = untypedStyle.Render(words[i])
+		wordsView[i] = ui.UntypedStyle.Render(words[i])
 	}
 
-	return typingTestModel{
+	return Model{
 		testWords:      words,
 		testWordsView:  wordsView,
 		testPosition:   0,
@@ -107,18 +111,22 @@ func NewTypingTestModel() typingTestModel {
 		testView:       "",
 		inputModel:     ti,
 		started:        false,
-		finished:       false,
+		Done:           false,
 		typedChars:     0,
-		stats:          testStats{characters: quote.Length},
+		Stats:          TestStats{Characters: quote.Length},
 	}
 }
 
-func (m typingTestModel) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (m typingTestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		return m, nil
 	case tea.PasteMsg:
 		return m, nil
 	case tea.KeyPressMsg:
@@ -149,7 +157,7 @@ func (m typingTestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.typedChars++
 		if !m.started {
 			m.started = true
-			m.stats.startTime = time.Now()
+			m.Stats.startTime = time.Now()
 			m.inputModel.Placeholder = ""
 		}
 		lastTypedChar = m.inputModel.Value()[m.cursorPosition]
@@ -165,9 +173,9 @@ func (m typingTestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cursor string
 	if m.inputModel.Position() >= len(currentWord) { // Out of bounds
-		cursor = cursorStyle.Render(" ")
+		cursor = ui.CursorStyle.Render(" ")
 		if m.cursorPosition < m.inputModel.Position() { // User entered a character
-			lastTypedCharStyled := errorStyle.Render(string(lastTypedChar))
+			lastTypedCharStyled := ui.ErrorStyle.Render(string(lastTypedChar))
 			m.charsStack = append(m.charsStack, lastTypedCharStyled)
 			m.inputView += lastTypedCharStyled
 		}
@@ -176,37 +184,37 @@ func (m typingTestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.cursorPosition < m.inputModel.Position() {
 			var lastTypedCharStyled string
 			if lastTypedChar == currentWord[m.cursorPosition] {
-				lastTypedCharStyled = typedStyle.Render(string(lastTypedChar))
+				lastTypedCharStyled = ui.TypedStyle.Render(string(lastTypedChar))
 			} else {
-				lastTypedCharStyled = errorStyle.Render(string(currentWord[m.cursorPosition]))
+				lastTypedCharStyled = ui.ErrorStyle.Render(string(currentWord[m.cursorPosition]))
 			}
 			m.charsStack = append(m.charsStack, lastTypedCharStyled)
 			m.inputView += lastTypedCharStyled
 		}
-		cursor = cursorStyle.Render(string(currentWord[m.inputModel.Position()]))
-		m.testWordsView[m.testPosition] = m.inputView + cursor + untypedStyle.Render(currentWord[m.inputModel.Position()+1:])
+		cursor = ui.CursorStyle.Render(string(currentWord[m.inputModel.Position()]))
+		m.testWordsView[m.testPosition] = m.inputView + cursor + ui.UntypedStyle.Render(currentWord[m.inputModel.Position()+1:])
 	}
 
 	if m.started == true {
-		m.stats.elapsedTime = time.Since(m.stats.startTime).Seconds()
-		if m.stats.elapsedTime > 1 {
-			m.stats.wpm = int(float64(m.typedChars) / 5 / (m.stats.elapsedTime / 60))
-			if m.stats.wpm > m.stats.greatestwpm {
-				m.stats.greatestwpm = m.stats.wpm
+		m.Stats.ElapsedTime = time.Since(m.Stats.startTime).Seconds()
+		if m.Stats.ElapsedTime > 1 {
+			m.Stats.Wpm = int(float64(m.typedChars) / 5 / (m.Stats.ElapsedTime / 60))
+			if m.Stats.Wpm > m.Stats.Greatestwpm {
+				m.Stats.Greatestwpm = m.Stats.Wpm
 			}
 		}
 		// Add performance data point
-		if m.stats.elapsedTime > nextSecond {
-			nextSecond = m.stats.elapsedTime + 1
-			m.stats.wpmData = append(m.stats.wpmData, wpmDataPoint{time: m.stats.elapsedTime, wpm: m.stats.wpm})
+		if m.Stats.ElapsedTime > nextSecond {
+			nextSecond = m.Stats.ElapsedTime + 1
+			m.Stats.WpmData = append(m.Stats.WpmData, wpmDataPoint{Time: m.Stats.ElapsedTime, Wpm: m.Stats.Wpm})
 		}
 	}
 
 	// When on the last word, check if it's correct so there is no need Pleaseto enter space
 	if m.testPosition == len(m.testWords)-1 && len(m.inputModel.Value()) == len(currentWord)-1 {
 		if m.testWords[m.testPosition] == m.inputModel.Value()+" " {
-			m.stats.wpmData = append(m.stats.wpmData, wpmDataPoint{time: m.stats.elapsedTime, wpm: m.stats.wpm})
-			m.finished = true
+			m.Stats.WpmData = append(m.Stats.WpmData, wpmDataPoint{Time: m.Stats.ElapsedTime, Wpm: m.Stats.Wpm})
+			m.Done = true
 			return m, nil
 		}
 	}
@@ -214,15 +222,15 @@ func (m typingTestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m typingTestModel) View() tea.View {
+func (m Model) View() tea.View {
 
 	m.testView = ""
 	for _, w := range m.testWordsView {
 		m.testView += w
 	}
 
-	content := testStyle.Render(m.testView) + "\n\n" + inputStyle.Render(m.inputModel.View())
-	s := lipgloss.Place(termWidth, termHeight, lipgloss.Center, lipgloss.Center, content)
+	content := ui.TestStyle.Render(m.testView) + "\n\n\n" + ui.InputStyle.Render(m.inputModel.View())
+	s := lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content)
 
 	return tea.View{Content: s, AltScreen: true}
 }
