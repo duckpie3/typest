@@ -12,20 +12,6 @@ import (
 	"github.com/duckpie3/typest/internal/ui"
 )
 
-type wpmDataPoint struct {
-	Time float64
-	Wpm  int
-}
-
-type TestStats struct {
-	Characters  int
-	Wpm         int
-	WpmData     []wpmDataPoint
-	Greatestwpm int
-	startTime   time.Time
-	ElapsedTime float64
-}
-
 type Model struct {
 	testWords      []string
 	testWordsView  []string

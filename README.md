@@ -31,12 +31,32 @@ go run ./cmd/typest
 
 ## Project files
 
-- app.go: app model, update loop, and screen transitions
-- typingTest.go: typing test state, input handling, live stats collection
-- results.go: results view and WPM graph rendering
-- loadTest.go: quote data loading and lookup helpers
-- styles.go: text styles and test area layout
-- quotes.json: quote dataset used by the typing test
+```
+typest/
+├── assets/                    ← datasets
+│   ├── quotes.json
+│   └── words.json
+├── bin/
+├── cmd/
+│   └── typest/
+│       └── main.go
+├── go.mod
+├── go.sum
+├── internal/
+│   ├── app/
+│   │   └── app.go             ← app model, update loop, and screen transitions
+│   ├── quotes/
+│   │   └── loader.go          ← quote data loading and lookup helpers
+│   ├── results/
+│   │   └── results.go         ← results.go: results view and WPM graph rendering
+│   ├── typing/
+│   │   ├── stats.go
+│   │   └── typing.go          ← typing test state, input handling, live stats collection
+│   └── ui/
+│       └── styles.go          ← text styles and test area layout
+├── README.md
+└── tests/
+```
 
 ## Notes
 
