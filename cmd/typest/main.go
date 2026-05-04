@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	m := app.NewAppModel()
+	m := app.New()
 	p := tea.NewProgram(m)
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)

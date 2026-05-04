@@ -1,26 +1,40 @@
 package app
 
 import (
+	"log"
+
 	tea "charm.land/bubbletea/v2"
+	"github.com/duckpie3/typest/internal/loader"
 	"github.com/duckpie3/typest/internal/results"
 	"github.com/duckpie3/typest/internal/typing"
 )
 
-type appModel struct {
+type Model struct {
 	currentModel tea.Model
+	quotesData   *loader.QuotesData
+	wordsData    *loader.WordsData
 	width        int
 	height       int
 }
 
-func NewAppModel() appModel {
-	return appModel{currentModel: typing.New()}
+func New() Model {
+	quotes, err := loader.LoadQuotes("assets/quotes.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	words, err := loader.LoadWords("assets/words.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return Model{currentModel: typing.New(), quotesData: quotes, wordsData: words}
 }
 
-func (m appModel) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return m.currentModel.Init()
 }
 
-func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch _msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = _msg.Width
@@ -52,6 +66,6 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m appModel) View() tea.View {
+func (m Model) View() tea.View {
 	return m.currentModel.View()
 }

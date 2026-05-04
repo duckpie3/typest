@@ -8,7 +8,7 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/duckpie3/typest/internal/quotes"
+	"github.com/duckpie3/typest/internal/loader"
 	"github.com/duckpie3/typest/internal/ui"
 )
 
@@ -75,7 +75,7 @@ func New() Model {
 	ti.Prompt = ""
 	ti.Placeholder = "Type the above word here"
 	nextSecond = 1
-	data, err := quotes.LoadQuotes("assets/quotes.json")
+	data, err := loader.LoadQuotes("assets/quotes.json")
 	if err != nil {
 		panic(err)
 	}
