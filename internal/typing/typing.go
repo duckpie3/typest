@@ -137,6 +137,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "space":
 			if m.testPosition < len(m.testWords)-1 && m.testWords[m.testPosition] == m.inputModel.Value()+" " {
+				if !m.started {
+					m.started = true
+					m.Stats.startTime = time.Now()
+					m.inputModel.Placeholder = ""
+				}
+				m.typedChars++
 				if m.testPosition+1 >= len(m.testWords) {
 					return m, tea.Quit
 				}

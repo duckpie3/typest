@@ -52,10 +52,7 @@ func buildQuoteTest(quotesData *loader.QuotesData, preset QuoteLength) (generate
 
 	rawWords := strings.Split(selected.Text, " ")
 	words, wordsView := buildWordsView(rawWords)
-	characters := selected.Length
-	if characters <= 0 {
-		characters = countCharacters(rawWords)
-	}
+	characters := countCharacters(rawWords)
 
 	return generatedTest{words: words, wordsView: wordsView, characters: characters}, nil
 }
@@ -86,11 +83,14 @@ func buildWordsView(rawWords []string) ([]string, []string) {
 }
 
 func countCharacters(rawWords []string) int {
+	if len(rawWords) == 0 {
+		return 0
+	}
 	total := 0
 	for _, word := range rawWords {
 		total += len(word)
 	}
-	return total
+	return total + len(rawWords) - 1
 }
 
 func quoteLengthBounds(groups [][]int, preset QuoteLength) (int, int) {
