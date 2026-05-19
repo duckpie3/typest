@@ -13,6 +13,7 @@ type Model struct {
 	currentModel tea.Model
 	quotesData   *loader.QuotesData
 	wordsData    *loader.WordsData
+	config       typing.Config
 	width        int
 	height       int
 }
@@ -26,8 +27,9 @@ func New() Model {
 	if err != nil {
 		log.Fatal(err)
 	}
+	config := typing.DefaultConfig()
 
-	return Model{currentModel: typing.New(), quotesData: quotes, wordsData: words}
+	return Model{currentModel: typing.New(quotes, words, config), quotesData: quotes, wordsData: words, config: config}
 }
 
 func (m Model) Init() tea.Cmd {
@@ -50,6 +52,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.currentModel, cmd = m.currentModel.Update(msg)
 	switch currentModel := m.currentModel.(type) {
 	case typing.Model:
+		if currentModel.RequestToggleMode {
+			m.config = typing.ToggleMode(m.config)
+		}
+		if currentModel.RequestLengthPreset > 0 {
+			m.config = typing.ApplyLengthPreset(m.config, currentModel.RequestLengthPreset)
+		}
+		if currentModel.RequestToggleMode || currentModel.RequestLengthPreset > 0 || currentModel.RequestNewTest {
+			m.currentModel = typing.New(m.quotesData, m.wordsData, m.config)
+			seeded, _ := m.currentModel.Update(tea.WindowSizeMsg{Width: m.width, Height: m.height})
+			m.currentModel = seeded
+			return m, nil
+		}
 		if currentModel.Done {
 			m.currentModel = results.New(currentModel.Stats)
 			seeded, _ := m.currentModel.Update(tea.WindowSizeMsg{Width: m.width, Height: m.height})
@@ -57,7 +71,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case results.Model:
 		if currentModel.NextTest {
-			m.currentModel = typing.New()
+			m.currentModel = typing.New(m.quotesData, m.wordsData, m.config)
 			seeded, _ := m.currentModel.Update(tea.WindowSizeMsg{Width: m.width, Height: m.height})
 			m.currentModel = seeded
 		}

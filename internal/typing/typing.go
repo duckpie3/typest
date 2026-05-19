@@ -1,8 +1,8 @@
 package typing
 
 import (
+	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"charm.land/bubbles/v2/textinput"
@@ -13,20 +13,24 @@ import (
 )
 
 type Model struct {
-	testWords      []string
-	testWordsView  []string
-	testPosition   int
-	inputView      string
-	cursorPosition int
-	charsStack     []string
-	testView       string
-	inputModel     textinput.Model
-	started        bool
-	Done           bool
-	typedChars     int
-	Stats          TestStats
-	width          int
-	height         int
+	testWords           []string
+	testWordsView       []string
+	testPosition        int
+	inputView           string
+	cursorPosition      int
+	charsStack          []string
+	testView            string
+	inputModel          textinput.Model
+	started             bool
+	Done                bool
+	typedChars          int
+	Stats               TestStats
+	config              Config
+	RequestNewTest      bool
+	RequestToggleMode   bool
+	RequestLengthPreset int
+	width               int
+	height              int
 }
 
 var nextSecond float64
@@ -68,28 +72,21 @@ func (m *Model) nextWord() {
 	m.charsStack = []string{}
 }
 
-func New() Model {
+func New(quotesData *loader.QuotesData, wordsData *loader.WordsData, config Config) Model {
 	ti := textinput.New()
 	ti.Focus()
 	ti.SetWidth(32)
 	ti.Prompt = ""
 	ti.Placeholder = "Type the above word here"
 	nextSecond = 1
-	data, err := loader.LoadQuotes("assets/quotes.json")
+	testData, err := generateTest(quotesData, wordsData, config)
 	if err != nil {
 		panic(err)
 	}
-	quote := data.RandomQuote()
-	words := strings.Split(quote.Text, " ")
-	wordsView := make([]string, len(words))
-	for i := range words {
-		words[i] += " "
-		wordsView[i] = ui.UntypedStyle.Render(words[i])
-	}
 
 	return Model{
-		testWords:      words,
-		testWordsView:  wordsView,
+		testWords:      testData.words,
+		testWordsView:  testData.wordsView,
 		testPosition:   0,
 		inputView:      "",
 		cursorPosition: 0,
@@ -99,7 +96,8 @@ func New() Model {
 		started:        false,
 		Done:           false,
 		typedChars:     0,
-		Stats:          TestStats{Characters: quote.Length},
+		Stats:          TestStats{Characters: testData.characters},
+		config:         config,
 	}
 }
 
@@ -117,6 +115,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case tea.KeyPressMsg:
 		switch msg.String() {
+		case "ctrl+n":
+			m.RequestNewTest = true
+			return m, nil
+		case "ctrl+m":
+			m.RequestToggleMode = true
+			return m, nil
+		case "ctrl+1":
+			m.RequestLengthPreset = 1
+			return m, nil
+		case "ctrl+2":
+			m.RequestLengthPreset = 2
+			return m, nil
+		case "ctrl+3":
+			m.RequestLengthPreset = 3
+			return m, nil
 		case "left", "right", "ctrl+v":
 			return m, nil
 		case "ctrl+backspace", "alt+backspace", "ctrl+w":
@@ -215,7 +228,7 @@ func (m Model) View() tea.View {
 		m.testView += w
 	}
 
-	controlGuide := "ctrl+c: Exit\tctrl+n: New test\tctrl+m: Change mode"
+	controlGuide := fmt.Sprintf("mode: %s (%s)\tctrl+m: toggle\tctrl+1/2/3: length\tctrl+n: new test\tctrl+c: exit", m.config.Mode.String(), m.config.LengthLabel())
 
 	content := ui.TestStyle.Render(m.testView) + "\n\n\n" + ui.InputStyle.Render(m.inputModel.View()) + "\n\n\n" + ui.ControlGuideStyle.Render(controlGuide)
 	s := lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content)
