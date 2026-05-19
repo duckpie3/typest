@@ -2,26 +2,44 @@ package ui
 
 import "charm.land/lipgloss/v2"
 
-var ErrorStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("1"))
+// Colors
 
-var UntypedStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("8"))
+var (
+	fg     = lipgloss.Color("7")
+	bg     = lipgloss.Color("0")
+	muted  = lipgloss.Color("8")
+	err    = lipgloss.Color("1")
+	accent = lipgloss.Color("4")
+)
 
-var TypedStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("7"))
+// Styles
+var (
+	ErrorStyle = lipgloss.NewStyle().
+			Foreground(err)
 
-var CursorStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("0")).
-	Background(lipgloss.Color("7"))
+	UntypedStyle = lipgloss.NewStyle().
+			Foreground(muted)
 
-var TestStyle = lipgloss.NewStyle().
-	Width(80).
-	Align(lipgloss.Left)
+	TypedStyle = lipgloss.NewStyle().
+			Foreground(fg)
 
-var InputStyle = lipgloss.NewStyle().
-	BorderStyle(lipgloss.RoundedBorder()).
-	PaddingLeft(1)
+	CursorStyle = lipgloss.NewStyle().
+			Foreground(bg).
+			Background(fg)
 
-var GraphStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("4"))
+	TestStyle = lipgloss.NewStyle().
+			Width(80).
+			Align(lipgloss.Left)
+
+	InputStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(fg).
+			PaddingLeft(1)
+
+	ControlGuideStyle = lipgloss.NewStyle().
+				Foreground(muted).
+				Align(lipgloss.Left)
+
+	GraphStyle = lipgloss.NewStyle().
+			Foreground(accent)
+)

@@ -215,7 +215,9 @@ func (m Model) View() tea.View {
 		m.testView += w
 	}
 
-	content := ui.TestStyle.Render(m.testView) + "\n\n\n" + ui.InputStyle.Render(m.inputModel.View())
+	controlGuide := "ctrl+c: Exit\tctrl+n: New test\tctrl+m: Change mode"
+
+	content := ui.TestStyle.Render(m.testView) + "\n\n\n" + ui.InputStyle.Render(m.inputModel.View()) + "\n\n\n" + ui.ControlGuideStyle.Render(controlGuide)
 	s := lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content)
 
 	return tea.View{Content: s, AltScreen: true}
