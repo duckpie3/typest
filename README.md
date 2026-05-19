@@ -2,6 +2,9 @@
 
 A simple terminal typing test built with Bubble Tea.
 
+![demo](demo.gif)
+
+
 ## What it does
 
 - Loads a random quote for each test
